@@ -444,6 +444,11 @@ impl FrameManager {
 
     /// Issued when new execution context is created
     pub fn on_frame_execution_context_created(&mut self, event: &EventExecutionContextCreated) {
+        // `uniqueId` is marked experimental in the CDP spec, so it may be absent
+        // depending on the Chrome version. Skip bookkeeping when it is missing.
+        let Some(unique_id) = event.context.unique_id.as_ref() else {
+            return;
+        };
         if let Some(frame_id) = event
             .context
             .aux_data
@@ -460,16 +465,16 @@ impl FrameManager {
                 {
                     frame
                         .main_world
-                        .set_context(event.context.id, event.context.unique_id.clone());
+                        .set_context(event.context.id, unique_id.clone());
                 } else if event.context.name == UTILITY_WORLD_NAME
                     && frame.secondary_world.execution_context().is_none()
                 {
                     frame
                         .secondary_world
-                        .set_context(event.context.id, event.context.unique_id.clone());
+                        .set_context(event.context.id, unique_id.clone());
                 }
                 self.context_ids
-                    .insert(event.context.unique_id.clone(), frame.id.clone());
+                    .insert(unique_id.clone(), frame.id.clone());
             }
         }
         if event
@@ -485,9 +490,14 @@ impl FrameManager {
 
     /// Issued when execution context is destroyed
     pub fn on_frame_execution_context_destroyed(&mut self, event: &EventExecutionContextDestroyed) {
-        if let Some(id) = self.context_ids.remove(&event.execution_context_unique_id) {
+        // `executionContextUniqueId` is marked experimental in the CDP spec,
+        // so it may be absent depending on the Chrome version.
+        let Some(unique_id) = event.execution_context_unique_id.as_ref() else {
+            return;
+        };
+        if let Some(id) = self.context_ids.remove(unique_id) {
             if let Some(frame) = self.frames.get_mut(&id) {
-                frame.destroy_context(&event.execution_context_unique_id);
+                frame.destroy_context(unique_id);
             }
         }
     }

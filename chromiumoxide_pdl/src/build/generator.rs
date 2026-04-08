@@ -625,7 +625,7 @@ impl Generator {
                 name: param.name().to_string(),
                 name_ident: field_name,
                 ty,
-                optional: param.optional,
+                optional: param.optional || param.experimental,
                 deprecated: param.is_deprecated(),
                 is_enum,
                 serde_skip: false,
